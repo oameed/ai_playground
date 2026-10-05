@@ -15,7 +15,7 @@
 * **_Create the conda environment `aipy` containing relevant packages_**  
 
   * **Agents**  
-    `openai-agents`  
+    `openai-agents`, `langchain-openai`  
 
   * **General**  
     `python-dotenv`, `pyyaml`, `pydantic`, `python-graphviz`, `gradio`  
