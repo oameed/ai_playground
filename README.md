@@ -14,11 +14,14 @@
 
 * **_Create the conda environment `aipy` containing relevant packages_**  
 
-  * **Agentic AI**  
-    `openai-agents`, `pydantic`, `gradio`  
+  * **Agents**  
+    `openai-agents`  
 
   * **General**  
-    `python-dotenv`, `pyyaml`, `python-graphviz`, `gdown`, `pypdf`  
+    `python-dotenv`, `pyyaml`, `pydantic`, `python-graphviz`, `gradio`  
+
+  * **Application Specific**  
+    `gdown`, `pypdf`
 
 * **_To run a project (with project `01` as an example)_**:  
   1. `cd` into project's main directory  
