@@ -26,11 +26,15 @@
      `OPENAI_API_KEY`, `HF_TOKEN`  
   3. `./app.sh 01`   
 
-## <a id="agentic-ai"></a> Agentic AI using [OpenAI](https://developers.openai.com/api/docs) [[Agents SDK]](https://openai.github.io/openai-agents-python/)  
+## <a id="agentic-ai"></a> Agentic AI  
 
 [[view]](https://simonwillison.net/2025/Sep/18/agents/) 2025.09. Willison. _What is an AI Agent?_  
 [[view]](https://www.philschmid.de/context-engineering) 2025.06. Schmid. _The New Skill in AI is Not Prompting, It's Context Engineering_  
 [[view]](https://www.anthropic.com/engineering/building-effective-agents) 2024.12. Anthropic. _Building Effective Agents_  
+
+* [OpenAI](https://developers.openai.com/api/docs) [[Agents SDK]](https://openai.github.io/openai-agents-python/)  
+* [LangChain](https://www.langchain.com/langchain) [[Agent]](https://docs.langchain.com/oss/python/langchain/overview)  
+
 
 ## <a id="huggingface"></a> [HuggingFace](https://huggingface.co/)  
 
