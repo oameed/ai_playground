@@ -12,8 +12,8 @@ from   dotenv                      import load_dotenv
 from   pydantic                    import BaseModel, Field
 from   langchain_core.tools        import tool
 from   langchain.agents            import create_agent
-from   langchain.agents.middleware import wrap_tool_call
 from   langgraph.checkpoint.memory import MemorySaver
+from   langchain.agents.middleware import wrap_tool_call
 
 import pdb
 
@@ -44,9 +44,11 @@ def send_email(email: str) -> str:
     wFILE(email, filename)
     return "OK"
 
-class State(TypedDict):
-    messages: Annotated[list, add_messages]
-    farsi   : str
+@wrap_tool_call
+def log_tool_calls(request, handler):
+    call = request.tool_call
+    print(f"[middleware] calling {call['name']} with {call['args']}")
+    return handler(request)
 
 def close_chat():
     print("Shutting Down ...")
@@ -63,40 +65,21 @@ def initialize_run():
     return params, prompts
 
 def main():
-    
-    def node_chatbot(state: State) -> dict:
-        return {"messages": [agent.invoke(state["messages"])]}
-    
-    def node_translator(state: State) -> dict:
-        last   = state  ["messages"  ][-1].content
-        prompt = prompts['translator'].format(x = last)
-        return {"farsi": agent.invoke(prompt).content}
-    
-    def chat(message: str, history):
-        config = {"configurable": {"thread_id": params['thread_id']}}
-        result = graph.invoke({"messages": [{"role": "user", "content": message}]}, config)
-        return f"{result['messages'][-1].content}\n\n*{result['farsi']}*"
-    
     params, prompts = initialize_run()
     load_dotenv()
     
     tools           = [send_email]
+    middleware      = [log_tool_calls]
     
-    agent           = ChatOpenAI(model = params['model'])
-    agent           = agent.bind_tools(tools)
+    agent           = create_agent(model         = params ['model'],
+                                   tools         = tools           ,
+                                   system_prompt = prompts['agent'],
+                                   middleware    = middleware       )
     
-    builder         = StateGraph(State)
-    builder.add_node("chatbot"   , node_chatbot   )
-    builder.add_node("tools"     , ToolNode(tools))
-    builder.add_node("translator", node_translator)
-    builder.add_edge             (START       , "chatbot"      )
-    builder.add_conditional_edges("chatbot"   , tools_condition, {"tools": "tools", END:"translator"})
-    builder.add_edge             ("tools"     , "chatbot"      )
-    builder.add_edge             ("translator", END            )
-    memory          = MemorySaver()
-    graph           = builder.compile(checkpointer = memory)
     filename        = os.path.join(os.environ.get("MY_WORKDIR"), "graph" + ".png")
     graph.get_graph().draw_mermaid_png(output_file_path = filename) 
+    
+    pdb.set_trace()
     
     with gradio.Blocks() as UI:
         gradio.ChatInterface(chat)

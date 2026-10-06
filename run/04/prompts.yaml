@@ -1,3 +1,3 @@
 
-translator : |
-  Translate this into Farsi, replying with the translation only:\n\n{x}
+agent : |
+  You are a travel assistant. Use your tools.
