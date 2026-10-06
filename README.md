@@ -15,13 +15,13 @@
 * **_Create the conda environment `aipy` containing relevant packages_**  
 
   * **Agents**  
-    `openai-agents`, `langgraph`, `langgraph-checkpoint-sqlite`, `langchain-openai`  
+    `openai-agents`, `langchain`, `langchain-openai`  
 
   * **General**  
     `pip`, `python-dotenv`, `pyyaml`, `pydantic`, `python-graphviz`, `gradio`  
 
   * **Application Specific**  
-    `gdown`, `pypdf`
+    `langgraph`, `langgraph-checkpoint-sqlite`, `gdown`, `pypdf`
 
 * **_To run a project (with project `01` as an example)_**:  
   1. `cd` into project's main directory  
