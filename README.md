@@ -21,7 +21,7 @@
     `pip`, `python-dotenv`, `pyyaml`, `pydantic`, `python-graphviz`, `gradio`  
 
   * **Application Specific**  
-    `langgraph`, `langgraph-checkpoint-sqlite`, `gdown`, `pypdf`
+    `langgraph-checkpoint-sqlite`, `gdown`, `pypdf`
 
 * **_To run a project (with project `01` as an example)_**:  
   1. `cd` into project's main directory  
