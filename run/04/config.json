@@ -1,7 +1,8 @@
 {
 
-"prjname"          : "sidekick"     ,
-"prjdescription"   : "Sidekick"     ,
-"model"            : "gpt-5.4-mini" 
+"prjname"       : "sidekick"     ,
+"prjdescription": "Sidekick"     ,
+"model"         : "gpt-5.4-mini" ,
+"thread_id"     : "thread-1" 
 
 }

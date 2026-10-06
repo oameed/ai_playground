@@ -1,6 +1,3 @@
 
-task : |
-  Send an email that answers the question: What is the capital of France?
-
-agent: |
-  You are a terse assistant who answers in exactly five words.
+translator : |
+  Translate this into Farsi, replying with the translation only:\n\n{x}
