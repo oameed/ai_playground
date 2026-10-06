@@ -36,7 +36,7 @@
 [[view]](https://www.anthropic.com/engineering/building-effective-agents) 2024.12. Anthropic. _Building Effective Agents_  
 
 * [OpenAI](https://developers.openai.com/api/docs) [[Agents SDK]](https://openai.github.io/openai-agents-python/)  
-* [LangChain](https://www.langchain.com/langgraph) [[Agent]](https://docs.langchain.com/oss/python/langchain/overview)  
+* [LangGraph](https://www.langchain.com/langgraph) [[LangChain]](https://docs.langchain.com/oss/python/langchain/overview)  
 
 
 ## <a id="huggingface"></a> [HuggingFace](https://huggingface.co/)  
