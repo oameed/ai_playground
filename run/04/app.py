@@ -1,7 +1,7 @@
 ###############################################
 ### AI Playground                           ###
 ### Agentic AI                              ###
-### LanggRAPH                               ###
+### LangChain                               ###
 ### by: OAMEED NOAKOASTEEN                  ###
 ############################################### 
 
@@ -15,8 +15,6 @@ from   langchain.agents            import create_agent
 from   langgraph.checkpoint.memory import MemorySaver
 from   langchain.agents.middleware import wrap_tool_call
 
-import pdb
-
 def rJSON(filename):
     import json
     with open(filename, 'r') as fobj:
@@ -29,19 +27,50 @@ def rYAML(filename):
         x = yaml.safe_load(fobj)
     return x
 
+def dFILE(url, filename):
+    import gdown
+    gdown.download(url, filename)
+
+def rPDF(filename):
+    from pypdf import PdfReader
+    reader  = PdfReader(filename)
+    content = ""
+    for page in reader.pages:
+        text = page.extract_text()
+        if text:
+            content += text
+    return content
+
 def wFILE(string, filename):
     with open(filename, "a", encoding = "utf-8") as fobj:
         fobj.write(string + "\n")
 
 @tool
-def send_email(email: str) -> str:
+def record_user_details(email: str, name: str = "NOT PROVIDED", notes: str = "NOT PROVIDED") -> str:
     '''
-    Send out an email
+    Use this tool to record that a user is interested in being in touch and provided an email address
+    
     Args:
-        email: Both the subject and the body of the email are concatenated in this variable
+        email: The email address of this user
+        name : The user's name, if they provided it
+        notes: Any additional info about the conversation that's worth recording to give context
     '''
     filename = os.path.join(os.environ.get("MY_WORKDIR"), "output" + ".txt")
-    wFILE(email, filename)
+    string   = f"Recording interest from {name} with email {email} and notes {notes}"
+    wFILE(string, filename)
+    return "OK"
+
+@tool
+def record_unknown_question(question: str) -> str:
+    '''
+    Always use this tool to record any question that couldn't be answered as you didn't know the answer
+
+    Args:
+        question: The question that couldn't be answered
+    '''
+    filename = os.path.join(os.environ.get("MY_WORKDIR"), "output" + ".txt")
+    string   = f"Recording {question} asked that I couldn't answer"
+    wFILE(string, filename)
     return "OK"
 
 @wrap_tool_call
@@ -50,10 +79,9 @@ def log_tool_calls(request, handler):
     print(f"[middleware] calling {call['name']} with {call['args']}")
     return handler(request)
 
-class CityReport(BaseModel):
-    city      : str = Field(description = "The city name"              )
-    weather   : str = Field(description = "A short weather description")
-    population: str = Field(description = "The population"             )
+class DualLanguageResponse(BaseModel):
+    reply_original  : str = Field(description = "The natural response to the user's query in English.")
+    reply_translated: str = Field(description = "The exact translation of reply_original into Farsi." )
 
 def visualize_graph(agent):
     filename = os.path.join(os.environ.get("MY_WORKDIR"), "graph" + ".png")
@@ -71,25 +99,33 @@ def initialize_run():
     shutil.rmtree(workdir, ignore_errors = True)
     os.makedirs  (workdir, exist_ok      = True)
     os.environ["MY_WORKDIR"] = workdir
+    filename = os.path.join(workdir, "resume" + ".pdf")
+    dFILE(params['url'], filename)
+    prompts['resume' ] = rPDF(filename)
     return params, prompts
 
 def main():
+    
+    def chat(message, history):
+        config = {"configurable": {"thread_id": params['thread_id']}}
+        result = agent.invoke({"messages": [{"role": "user", "content": message}]}, config)
+        return f"{result['structured_response'].reply_original}\n\n*{result['structured_response'].reply_translated}*"
+
     params, prompts = initialize_run()
     load_dotenv()
     
-    tools           = [send_email]
+    system_prompt   = prompts['agent'].format(x = prompts['summary'], y = prompts['resume'])
+    tools           = [record_user_details, record_unknown_question]
     middleware      = [log_tool_calls]
     memory          = MemorySaver()
     
-    agent           = create_agent(model           = params ['model'],
-                                   system_prompt   = prompts['agent'],
-                                   tools           = tools           ,
-                                   response_format = CityReport      ,
-                                   middleware      = middleware      ,
-                                   checkpointer    = memory           )
+    agent           = create_agent(system_prompt   = system_prompt       ,
+                                   model           = params['model']     ,
+                                   tools           = tools               ,
+                                   response_format = DualLanguageResponse,
+                                   middleware      = middleware          ,
+                                   checkpointer    = memory               )
     visualize_graph(agent)
-    
-    pdb.set_trace()
     
     with gradio.Blocks() as UI:
         gradio.ChatInterface(chat)

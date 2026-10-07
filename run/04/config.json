@@ -1,8 +1,9 @@
 {
 
-"prjname"       : "sidekick"     ,
-"prjdescription": "Sidekick"     ,
-"model"         : "gpt-5.4-mini" ,
-"thread_id"     : "thread-1" 
+"prjname"       : "twinLC"                                                                 ,
+"prjdescription": "Digital Twin"                                                           ,
+"model"         : "gpt-5.4-mini"                                                           ,
+"url"           : "https://drive.google.com/file/d/16DUwZmscAuJAf5GhxkgPy8g_z_v_L5Ma/view" ,
+"thread_id"     : "thread-1"
 
 }

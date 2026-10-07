@@ -50,6 +50,10 @@ class State(TypedDict):
     messages: Annotated[list, add_messages]
     farsi   : str
 
+def visualize_graph(agent):
+    filename = os.path.join(os.environ.get("MY_WORKDIR"), "graph" + ".png")
+    agent.get_graph().draw_mermaid_png(output_file_path = filename) 
+
 def close_chat():
     print("Shutting Down ...")
     os.kill(os.getpid(), signal.SIGINT)
@@ -74,7 +78,7 @@ def main():
         prompt = prompts['translator'].format(x = last)
         return {"farsi": agent.invoke(prompt).content}
     
-    def chat(message: str, history):
+    def chat(message, history):
         config = {"configurable": {"thread_id": params['thread_id']}}
         result = graph.invoke({"messages": [{"role": "user", "content": message}]}, config)
         return f"{result['messages'][-1].content}\n\n*{result['farsi']}*"
@@ -97,8 +101,7 @@ def main():
     builder.add_edge             ("translator", END            )
     memory          = MemorySaver()
     graph           = builder.compile(checkpointer = memory)
-    filename        = os.path.join(os.environ.get("MY_WORKDIR"), "graph" + ".png")
-    graph.get_graph().draw_mermaid_png(output_file_path = filename) 
+    visualize_graph(agent)
     
     with gradio.Blocks() as UI:
         gradio.ChatInterface(chat)
