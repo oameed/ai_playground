@@ -50,6 +50,15 @@ def log_tool_calls(request, handler):
     print(f"[middleware] calling {call['name']} with {call['args']}")
     return handler(request)
 
+class CityReport(BaseModel):
+    city      : str = Field(description = "The city name"              )
+    weather   : str = Field(description = "A short weather description")
+    population: str = Field(description = "The population"             )
+
+def visualize_graph(agent):
+    filename = os.path.join(os.environ.get("MY_WORKDIR"), "graph" + ".png")
+    agent.get_graph().draw_mermaid_png(output_file_path = filename) 
+
 def close_chat():
     print("Shutting Down ...")
     os.kill(os.getpid(), signal.SIGINT)
@@ -70,14 +79,15 @@ def main():
     
     tools           = [send_email]
     middleware      = [log_tool_calls]
+    memory          = MemorySaver()
     
-    agent           = create_agent(model         = params ['model'],
-                                   tools         = tools           ,
-                                   system_prompt = prompts['agent'],
-                                   middleware    = middleware       )
-    
-    filename        = os.path.join(os.environ.get("MY_WORKDIR"), "graph" + ".png")
-    graph.get_graph().draw_mermaid_png(output_file_path = filename) 
+    agent           = create_agent(model           = params ['model'],
+                                   system_prompt   = prompts['agent'],
+                                   tools           = tools           ,
+                                   response_format = CityReport      ,
+                                   middleware      = middleware      ,
+                                   checkpointer    = memory           )
+    visualize_graph(agent)
     
     pdb.set_trace()
     
