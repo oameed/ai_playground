@@ -2,7 +2,7 @@
 
 APPDIR=$1
 
-source activate oaipy
+source activate aipy
 
 cd 'run'/${APPDIR}
 

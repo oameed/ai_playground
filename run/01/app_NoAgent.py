@@ -53,33 +53,40 @@ def record_unknown_question(question):
     wFILE(string, filename)
     return "OK"
 
-def handle_tool_calls(tool_calls):
-    tooloptions   = {"record_user_details"    : record_user_details    ,
-                     "record_unknown_question": record_unknown_question }
-    results       = []
-    for tool_call in tool_calls:
-        tool_name = tool_call.function.name
-        arguments = json.loads(tool_call.function.arguments)
-        print(f"Tool called: {tool_name}", flush=True)
-        result    = tooloptions[tool_name](**arguments)        
-        results.append({"role": "tool","content": json.dumps(result),"tool_call_id": tool_call.id})
-    return results
+class Manager():
+    def __init__(self, ai, model, instructions, tools):
+        self.ai           = ai
+        self.model        = model
+        self.instructions = instructions
+        self.tools        = tools
 
-def chat_func(message, history, ai, model, instructions, tools):    
-    messages       = [{"role": "system", "content": instructions}] + history + [{"role": "user", "content": message}]
-    response       = ai.chat.completions.create(model = model, messages = messages, tools = tools)
-    while response.choices[0].finish_reason == "tool_calls":
-        message    = response.choices[0].message
-        tool_calls = message.tool_calls
-        results    = handle_tool_calls(tool_calls)
-        messages.append(message)
-        messages.extend(results)
-        response   = ai.chat.completions.create(model = model, messages = messages, tools = tools)
-    return response.choices[0].message.content
+    def chat_run(self, message, history):    
+        messages       = [{"role": "system", "content": self.instructions}] + history + [{"role": "user", "content": message}]
+        response       = self.ai.chat.completions.create(model = self.model, messages = messages, tools = self.tools)
+        while response.choices[0].finish_reason == "tool_calls":
+            message    = response.choices[0].message
+            tool_calls = message.tool_calls
+            results    = self.handle_tool_calls(tool_calls)
+            messages.append(message)
+            messages.extend(results)
+            response   = self.ai.chat.completions.create(model = self.model, messages = messages, tools = self.tools)
+        return response.choices[0].message.content
 
-def close_chat():
-    print("Shutting Down ...")
-    os.kill(os.getpid(), signal.SIGINT)
+    def chat_close(self):
+        print("Shutting Down ...")
+        os.kill(os.getpid(), signal.SIGINT)
+
+    def handle_tool_calls(self, tool_calls):
+        tooloptions   = {"record_user_details"    : record_user_details    ,
+                         "record_unknown_question": record_unknown_question }
+        results       = []
+        for tool_call in tool_calls:
+            tool_name = tool_call.function.name
+            arguments = json.loads(tool_call.function.arguments)
+            print(f"Tool called: {tool_name}", flush=True)
+            result    = tooloptions[tool_name](**arguments)        
+            results.append({"role": "tool","content": json.dumps(result),"tool_call_id": tool_call.id})
+        return results
 
 def initialize_run():
     import shutil
@@ -104,15 +111,16 @@ def main():
     tools                       = [{"type"    : "function"                           ,
                                     "function": tools_dict['record_user_details'    ] },
                                    {"type"    : "function"                           , 
-                                     "function": tools_dict['record_unknown_question'] } ]
+                                    "function": tools_dict['record_unknown_question'] } ]
     
-    ai                           = OpenAI()
-    
-    chat                         = lambda message, history: chat_func(message, history, ai, params['model'], instructions, tools)
+    manager                     = Manager(ai           = OpenAI()       ,
+                                          model        = params['model'],
+                                          instructions = instructions   ,
+                                          tools        = tools           )
     
     with gradio.Blocks() as UI:
-        gradio.ChatInterface(chat)
-        gradio.Button("End Chat", variant = "stop").click(fn = close_chat)
+        gradio.ChatInterface(manager.chat_run)
+        gradio.Button("End Chat", variant = "stop").click(fn = manager.chat_close)
     UI.launch()
     
     print('Finished!')
