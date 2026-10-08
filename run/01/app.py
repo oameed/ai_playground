@@ -69,9 +69,24 @@ def record_unknown_question(question: str) -> str:
     wFILE(string, filename)
     return "OK"
 
-def close_chat():
-    print("Shutting Down ...")
-    os.kill(os.getpid(), signal.SIGINT)
+class Manager():
+    def __init__(self, params, agent, session):
+        self.params  = params
+        self.agent   = agent
+        self.session = session
+
+    async def chat_run(self, message, history):
+        async for status_update in self.orchestrate(message):
+            yield status_update
+
+    def chat_close(self):
+        print("Shutting Down ...")
+        os.kill(os.getpid(), signal.SIGINT)
+
+    async def orchestrate(self, query):
+        with trace(self.params['prjdescription']):
+            result = await Runner.run(self.agent, query, session = self.session)    
+            yield result.final_output
 
 def initialize_run():
     import shutil
@@ -86,37 +101,29 @@ def initialize_run():
     prompts['resume' ] = rPDF(filename)
     return params, prompts
 
-def main():
-
-    class Manager():
-
-        async def run(self, query):
-            with trace(params['prjdescription']):
-                result = await Runner.run(agent_01, query, session = session)    
-                yield result.final_output
-
-    async def chat(message, history):
-        async for status_update in Manager().run(message):
-            yield status_update
-    
+def main():    
     params, prompts = initialize_run()
     session         = SQLiteSession("12346")
     load_dotenv()
     
     instructions    = prompts['agent_01'].format(x = prompts['summary'], y = prompts['resume'])
+    tools           = [record_user_details, record_unknown_question]
     
-    agent_01        = Agent(instructions   = instructions                                  ,
-                            model          = params ['model'   ]                           ,
-                            name           = "twin"                                        ,
-                            tools          = [record_user_details, record_unknown_question] )
+    agent_01        = Agent(instructions = instructions   ,
+                            model        = params['model'],
+                            name         = "twin"         ,
+                            tools        = tools           )
+    
+    manager = Manager(params  = params  ,
+                      agent   = agent_01,
+                      session = session  )
     
     with gradio.Blocks() as UI:
-        gradio.ChatInterface(chat)
-        gradio.Button("End Chat", variant = "stop").click(fn = close_chat)
+        gradio.ChatInterface(manager.chat_run)
+        gradio.Button("End Chat", variant = "stop").click(fn = manager.chat_close)
     UI.launch()
     
     print('Finished!')
-
 
 if __name__ == "__main__":
     main()
