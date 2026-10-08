@@ -9,7 +9,6 @@ import os
 import asyncio
 from   dotenv import load_dotenv
 from   agents import Agent, Runner, trace, function_tool, ModelSettings
-from agents.extensions.visualization import draw_graph
 
 def rJSON(filename):
     import json
@@ -38,6 +37,20 @@ def send_email(email: str) -> str:
     wFILE(email, filename)
     return "OK"
 
+class Manager():
+    def __init__(self, params, agent):
+        self.params = params
+        self.agent  = agent
+
+    async def orchestrate(self,query):
+        with trace(self.params['prjdescription']):
+            _ = await Runner.run(self.agent, query)
+
+    def visualize_graph(self):
+        from agents.extensions.visualization import draw_graph
+        filename = os.path.join(os.environ.get("MY_WORKDIR"),"graph")
+        draw_graph(self.agent, filename = filename)
+
 def initialize_run():
     import shutil
     params  = rJSON("config"  + ".json")
@@ -49,14 +62,6 @@ def initialize_run():
     return params, prompts
 
 def main():
-
-    class Manager():
-
-        async def run(self,query):
-            with trace(params['prjdescription']):
-                _ = await Runner.run(agent_01, query)
-
-
     params, prompts = initialize_run()
     load_dotenv()
     
@@ -88,10 +93,11 @@ def main():
                             model_settings = ModelSettings(tool_choice = "required"),
                             name           = "Sales Manager"                        ,
                             tools          = tools                                   )
+
+    manager         = Manager(params = params, agent = agent_01)
+    manager.visualize_graph()
     
-    draw_graph(agent_01, filename = os.path.join(os.environ.get("MY_WORKDIR"),"graph"))
-    
-    asyncio.run(Manager().run(prompts['task_OBL'])) 
+    asyncio.run(manager.orchestrate(prompts['task_OBL'])) 
         
     print('Finished!')
 

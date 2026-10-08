@@ -37,6 +37,30 @@ def send_email(email: str) -> str:
     wFILE(email, filename)
     return "OK"
 
+class Manager():
+    def __init__(self, params, agent_01, agent_02, agent_03, agent_04):
+        self.params   = params
+        self.agent_01 = agent_01
+        self.agent_02 = agent_02
+        self.agent_03 = agent_03
+        self.agent_04 = agent_04
+
+    async def orchestrate(self, query):
+        with trace(self.params['prjdescription']):
+            emails = await self.write(query)
+            emails = "Cold sales emails:\n\n" + "\n\nEmail:\n\n".join(emails)
+            _      = await self.pick(emails)
+
+    async def write(self, query):
+        result = await asyncio.gather(Runner.run(self.agent_02, query),
+                                      Runner.run(self.agent_03, query),
+                                      Runner.run(self.agent_04, query) )
+        return [r.final_output for r in result]
+
+    async def pick(self, query):
+        result = await Runner.run(self.agent_01, query)
+        return None        
+
 def initialize_run():
     import shutil
     params  = rJSON("config"  + ".json")
@@ -48,25 +72,6 @@ def initialize_run():
     return params, prompts
 
 def main():
-
-    class Manager():
-
-        async def run  (self, query):
-            with trace(params['prjdescription']):
-                emails = await self.write(query)
-                emails = "Cold sales emails:\n\n" + "\n\nEmail:\n\n".join(emails)
-                _      = await self.pick(emails)
-
-        async def write(self, query):
-            result = await asyncio.gather(Runner.run(agent_02, query),
-                                          Runner.run(agent_03, query),
-                                          Runner.run(agent_04, query) )
-            return [r.final_output for r in result]
-
-        async def pick(self, query):
-            result = await Runner.run(agent_01, query)
-            return None        
-
     params, prompts = initialize_run()
     load_dotenv()
     
@@ -88,7 +93,13 @@ def main():
                             model          = params ['model'   ]                    ,
                             name           = "Executive Sales Agent"                 )
 
-    asyncio.run(Manager().run(prompts['task'])) 
+    manager         = Manager(params   = params  ,
+                              agent_01 = agent_01,
+                              agent_02 = agent_02,
+                              agent_03 = agent_03,
+                              agent_04 = agent_04 )
+
+    asyncio.run(manager.orchestrate(prompts['task'])) 
     
     print('Finished!')
 

@@ -88,12 +88,12 @@ class Manager():
         self.params = params
         self.agent  = agent
     
-    def chat(self, message, history):
+    def chat_run(self, message, history):
         config = {"configurable": {"thread_id": self.params['thread_id']}}
         result = self.agent.invoke({"messages": [{"role": "user", "content": message}]}, config)
         return f"{result['structured_response'].reply_original}\n\n*{result['structured_response'].reply_translated}*"
 
-    def close_chat(self):
+    def chat_close(self):
         print("Shutting Down ...")
         os.kill(os.getpid(), signal.SIGINT)
 
@@ -133,8 +133,8 @@ def main():
     manager         = Manager(params, agent)
     
     with gradio.Blocks() as UI:
-        gradio.ChatInterface(manager.chat)
-        gradio.Button("End Chat", variant = "stop").click(fn = manager.close_chat)
+        gradio.ChatInterface(manager.chat_run)
+        gradio.Button("End Chat", variant = "stop").click(fn = manager.chat_close)
     UI.launch()
         
     print('Finished!')

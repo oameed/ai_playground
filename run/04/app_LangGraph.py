@@ -98,12 +98,12 @@ class Manager():
         self.system_prompt = system_prompt
         self.graph         = graph
 
-    def chat(self, message, history):
+    def chat_run(self, message, history):
         messages = [{"role": "system", "content": self.system_prompt}] + history + [{"role": "user", "content": message}]
         result   = self.graph.invoke({"messages": messages})
         return f"{result['messages'][-1].content}\n\n*{result['farsi']}*"
 
-    def close_chat(self):
+    def chat_close(self):
         print("Shutting Down ...")
         os.kill(os.getpid(), signal.SIGINT)
 
@@ -148,8 +148,8 @@ def main():
     manager.visualize_graph()
     
     with gradio.Blocks() as UI:
-        gradio.ChatInterface(manager.chat)
-        gradio.Button("End Chat", variant = "stop").click(fn = manager.close_chat)
+        gradio.ChatInterface(manager.chat_run)
+        gradio.Button("End Chat", variant = "stop").click(fn = manager.chat_close)
     UI.launch()
         
     print('Finished!')
