@@ -83,13 +83,23 @@ class DualLanguageResponse(BaseModel):
     reply_original  : str = Field(description = "The natural response to the user's query in English.")
     reply_translated: str = Field(description = "The exact translation of reply_original into Farsi." )
 
-def visualize_graph(agent):
-    filename = os.path.join(os.environ.get("MY_WORKDIR"), "graph" + ".png")
-    agent.get_graph().draw_mermaid_png(output_file_path = filename) 
+class Manager():
+    def __init__(self, params, agent):
+        self.params = params
+        self.agent  = agent
+    
+    def chat(self, message, history):
+        config = {"configurable": {"thread_id": self.params['thread_id']}}
+        result = self.agent.invoke({"messages": [{"role": "user", "content": message}]}, config)
+        return f"{result['structured_response'].reply_original}\n\n*{result['structured_response'].reply_translated}*"
 
-def close_chat():
-    print("Shutting Down ...")
-    os.kill(os.getpid(), signal.SIGINT)
+    def close_chat(self):
+        print("Shutting Down ...")
+        os.kill(os.getpid(), signal.SIGINT)
+
+    def visualize_graph(self):
+        filename = os.path.join(os.environ.get("MY_WORKDIR"), "graph" + ".png")
+        self.agent.get_graph().draw_mermaid_png(output_file_path = filename) 
 
 def initialize_run():
     import shutil
@@ -105,12 +115,6 @@ def initialize_run():
     return params, prompts
 
 def main():
-    
-    def chat(message, history):
-        config = {"configurable": {"thread_id": params['thread_id']}}
-        result = agent.invoke({"messages": [{"role": "user", "content": message}]}, config)
-        return f"{result['structured_response'].reply_original}\n\n*{result['structured_response'].reply_translated}*"
-
     params, prompts = initialize_run()
     load_dotenv()
     
@@ -125,11 +129,12 @@ def main():
                                    response_format = DualLanguageResponse,
                                    middleware      = middleware          ,
                                    checkpointer    = memory               )
-    visualize_graph(agent)
+    
+    manager         = Manager(params, agent)
     
     with gradio.Blocks() as UI:
-        gradio.ChatInterface(chat)
-        gradio.Button("End Chat", variant = "stop").click(fn = close_chat)
+        gradio.ChatInterface(manager.chat)
+        gradio.Button("End Chat", variant = "stop").click(fn = manager.close_chat)
     UI.launch()
         
     print('Finished!')
