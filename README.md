@@ -26,7 +26,7 @@
 * **_To run a project (with project `01` as an example)_**:  
   1. `cd` into project's main directory  
   2. create the `.env` file and populate with access tokens:  
-     `OPENAI_API_KEY`, `HF_TOKEN`  
+     `OPENAI_API_KEY`, `LANGSMITH_API_KEY`, `SERPER_API_KEY`, `HF_TOKEN`  
   3. `./app.sh 01`   
 
 ## <a id="agentic-ai"></a> Agentic AI  
