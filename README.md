@@ -21,12 +21,12 @@
     `pip`, `python-dotenv`, `pyyaml`, `pydantic`, `python-graphviz`, `gradio`  
 
   * **Application Specific**  
-    `langchain-community`, `langgraph-checkpoint-sqlite`, `gdown`, `pypdf`
+    `langchain-tavily`, `gdown`, `pypdf`
 
 * **_To run a project (with project `01` as an example)_**:  
   1. `cd` into project's main directory  
   2. create the `.env` file and populate with access tokens:  
-     `OPENAI_API_KEY`, `LANGSMITH_API_KEY`, `SERPER_API_KEY`, `HF_TOKEN`  
+     `OPENAI_API_KEY`, `LANGSMITH_API_KEY`, `TAVILY_API_KEY`, `HF_TOKEN`  
   3. `./app.sh 01`   
 
 ## <a id="agentic-ai"></a> Agentic AI  
