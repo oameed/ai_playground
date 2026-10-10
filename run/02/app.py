@@ -7,6 +7,8 @@
 
 import os
 import asyncio
+import gradio
+import signal
 from   dotenv import load_dotenv
 from   agents import Agent, Runner, trace, function_tool, ModelSettings
 
@@ -45,11 +47,22 @@ class Manager():
         self.agent_03 = agent_03
         self.agent_04 = agent_04
 
+    async def chat_run(self,query):
+        async for status_update in self.orchestrate(query):
+            yield status_update
+    
+    def chat_close(self):
+        print("Shutting Down ...")
+        os.kill(os.getpid(), signal.SIGINT)
+
     async def orchestrate(self, query):
         with trace(self.params['prjdescription']):
+            yield "Writing emails   ..."
             emails = await self.write(query)
+            yield "Picking emails   ..."
             emails = "Cold sales emails:\n\n" + "\n\nEmail:\n\n".join(emails)
-            _      = await self.pick(emails)
+            email  = await self.pick(emails)
+            yield email
 
     async def write(self, query):
         result = await asyncio.gather(Runner.run(self.agent_02, query),
@@ -59,7 +72,7 @@ class Manager():
 
     async def pick(self, query):
         result = await Runner.run(self.agent_01, query)
-        return None        
+        return result.final_output
 
 def initialize_run():
     import shutil
@@ -99,7 +112,15 @@ def main():
                               agent_03 = agent_03,
                               agent_04 = agent_04 )
 
-    asyncio.run(manager.orchestrate(prompts['task'])) 
+    with gradio.Blocks() as UI:
+        textbox_query = gradio.Textbox (label = "What topic would you like to research?")
+        button_run    = gradio.Button  ("Run"     , variant = "primary")
+        button_end    = gradio.Button  ("End Chat", variant = "stop"   )
+        report        = gradio.Markdown(label = "Report")
+
+        button_run.click(manager.chat_run, inputs = textbox_query, outputs = report)
+        button_end.click(fn = manager.chat_close)
+    UI.launch()
     
     print('Finished!')
 

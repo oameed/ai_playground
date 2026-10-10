@@ -1,8 +1,7 @@
 {
 
-"prjname"          : "researcherLC" ,
-"prjdescription"   : "Deep Research",
-"model"            : "gpt-5.4-mini" ,
-"HOW_MANY_SEARCHES": 3
+"prjname"        : "sdrLC"                           ,
+"prjdescription" : "Sales Development Representative",
+"model"          : "gpt-5.4-mini"
 
 }

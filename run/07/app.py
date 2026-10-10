@@ -1,7 +1,7 @@
 ###############################################
 ### AI Playground                           ###
 ### Agentic AI                              ###
-### OpenAI Agents SDK                       ###
+### LangChain                               ###
 ### by: OAMEED NOAKOASTEEN                  ###
 ############################################### 
 
@@ -9,9 +9,13 @@ import os
 import asyncio
 import gradio
 import signal 
-from   dotenv   import load_dotenv
-from   agents   import Agent, Runner, trace, function_tool, ModelSettings, WebSearchTool
-from   pydantic import BaseModel, Field
+from   dotenv                      import load_dotenv
+from   pydantic                    import BaseModel, Field
+from   langchain_core.tools        import tool
+from   langchain.agents            import create_agent
+from   langgraph.checkpoint.memory import MemorySaver
+from   langchain.agents.middleware import wrap_tool_call
+from   langchain_tavily            import TavilySearch
 
 def rJSON(filename):
     import json
@@ -29,7 +33,7 @@ def wFILE(string, filename):
     with open(filename, "a", encoding = "utf-8") as fobj:
         fobj.write(string + "\n")
 
-@function_tool
+@tool
 def send_email(email: str) -> str:
     '''
     Send out an email with the given subject and body to all sales prospects
@@ -39,6 +43,12 @@ def send_email(email: str) -> str:
     filename = os.path.join(os.environ.get("MY_WORKDIR"), "output" + ".txt")
     wFILE(email, filename)
     return "OK"
+
+@wrap_tool_call
+async def log_tool_calls(request, handler):
+    call = request.tool_call
+    print(f"[middleware] calling {call['name']} with {call['args']}")
+    return await handler(request)
 
 class WebSearchItem(BaseModel):
     reason: str = Field(description = "Your reasoning for why this search is important to the query.")
@@ -69,25 +79,26 @@ class Manager():
         os.kill(os.getpid(), signal.SIGINT)
     
     async def orchestrate(self, query):
-        with trace(self.params['prjdescription']):
-            yield "Planning searches    ..."
-            plan    = await self.search_plan   (query)
-            yield "Performing Searches  ..."
-            results = await self.search_perform(plan )
-            yield "Writing report       ..."
-            report  = await self.report_write  (query,results)
-            yield "Sending email        ..."
-            _       = await self.send_email    (report)
-            yield report.markdown_report
+        yield "Planning searches   ..."            #
+        plan    = await self.search_plan   (query) #
+        yield "Performing Searches ..."            #
+        results = await self.search_perform(plan ) #
+        yield "Writing report      ..."
+        report  = await self.report_write  (query,results)
+        yield "Sending email       ..."
+        _       = await self.send_email    (report)
+        yield report.markdown_report
 
     async def search(self, item):
-        input_message = f"Search term: {item.query}\nReason for searching: {item.reason}"
-        x             = await Runner.run(self.agent_01, input_message)
-        return x.final_output
+        query = f"Search term: {item.query}\nReason for searching: {item.reason}"
+        query = {"messages": [{"role": "user", "content": query}]}
+        x     = await self.agent_01.ainvoke(query)
+        return x['messages'][-1].content
 
     async def search_plan(self, query):
-        x = await Runner.run(self.agent_02, f"Query: {query}")
-        return x.final_output
+        query = {"messages": [{"role": "user", "content": f"Query: {query}"}]}
+        x     = await self.agent_02.ainvoke(query)
+        return x['structured_response']
 
     async def search_perform(self, plan):
         tasks = [self.search(item) for item in plan.searches]
@@ -96,11 +107,13 @@ class Manager():
 
     async def report_write(self, query, results):
         input_message = f"Original query: {query}\nSummarized search results: {results}"
-        x             = await Runner.run(self.agent_03, input_message)
-        return x.final_output
+        input_message = {"messages": [{"role": "user", "content": input_message}]}
+        x             = await self.agent_03.ainvoke(input_message)
+        return x['structured_response']
     
     async def send_email(self, report):
-        x = await Runner.run(self.agent_04, report.markdown_report)
+        input_message = {"messages": [{"role": "user", "content": report.markdown_report}]}
+        x             = await self.agent_04.ainvoke(input_message)
         return None
 
 def initialize_run():
@@ -117,35 +130,34 @@ def main():
     params, prompts = initialize_run()
     load_dotenv()
     
-    agent_01        = Agent(instructions   = prompts['agent_01']                    ,
-                            model          = params ['model'   ]                    ,  
-                            model_settings = ModelSettings(tool_choice = "required"),
-                            name           = "Searcher"                             ,
-                            tools          = [WebSearchTool()]                       )
+    middleware      = [log_tool_calls]
 
-    instructions    = prompts['agent_02'].format(x = params['HOW_MANY_SEARCHES'])
-    agent_02        = Agent(instructions   = instructions    ,
-                            model          = params ['model'],
-                            name           = "Planner"       ,
-                            output_type    = WebSearchPlan    )
+    agent_01        = create_agent(system_prompt   = prompts['agent_01'],
+                                   model           = params ['model'   ],
+                                   tools           = [TavilySearch()]   ,
+                                   middleware      = middleware          )
     
-    agent_03        = Agent(instructions   = prompts['agent_03'],
-                            model          = params ['model'   ],
-                            name           = "Writer"           ,
-                            output_type    = ReportData          )
-    
-    agent_04        = Agent(instructions   = prompts['agent_04']                    ,
-                            model          = params ['model'   ]                    ,  
-                            model_settings = ModelSettings(tool_choice = "required"),
-                            name           = "Email"                                ,
-                            tools          = [send_email]                            )
+    system_prompt   = prompts['agent_02'].format(x = params['HOW_MANY_SEARCHES'])
+    agent_02        = create_agent(system_prompt   = system_prompt  ,
+                                   model           = params['model'],
+                                   response_format = WebSearchPlan   )
 
+    agent_03        = create_agent(system_prompt   = prompts['agent_03'],
+                                   model           = params ['model'   ],
+                                   response_format = ReportData          )
+
+    agent_04        = create_agent(system_prompt   = prompts['agent_04'],
+                                   model           = params ['model'   ],
+                                   tools           = [send_email]       ,
+                                   middleware      = middleware          )
+    
     manager         = Manager(params   = params  ,
                               agent_01 = agent_01,  
                               agent_02 = agent_02,  
                               agent_03 = agent_03,  
                               agent_04 = agent_04 )
-
+    
+    
     with gradio.Blocks() as UI:
         textbox_query = gradio.Textbox (label = "What topic would you like to research?")
         button_run    = gradio.Button  ("Run"     , variant = "primary")
