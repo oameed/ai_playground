@@ -123,7 +123,6 @@ def main():
                               agent_03 = agent_03,
                               agent_04 = agent_04 )
 
-    #asyncio.run(manager.orchestrate(prompts['task'])) 
     with gradio.Blocks() as UI:
         textbox_query = gradio.Textbox (label = "What topic would you like to research?")
         button_run    = gradio.Button  ("Run"     , variant = "primary")
